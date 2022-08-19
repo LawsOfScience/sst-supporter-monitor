@@ -48,10 +48,15 @@ async function getRobloxID(discordID) {
 }
 
 /**
+ * NOT CURRENTLY IN USE - need to get interaction complete
  * @param {GuildMember | PartialGuildMember} member
  */
 async function handleUserAcceptance(member) {
+    return;
+
     const robloxID = await getRobloxID(member.id);
+    const logChannelID = "1009515522972459068";
+    const logChannel = client.channels.cache.get(logChannelID);
 
     try {
         // Terminate early using the catch because I don't wanna write another embed
@@ -76,14 +81,11 @@ async function handleUserAcceptance(member) {
         const confirmInteraction = await member.send({ embeds: [embed], components: [components] });
     } catch (err) {
         // Something failed so tell SST Admins
-        const logChannelID = "1009515522972459068";
-        const logChannel = client.channels.cache.get(logChannelID);
-
         const embed = new EmbedBuilder()
             .setTitle("New Supporter DM Failed")
             .setDescription("Failed to automatically accept a new supporter into the QSST group. Please do this manually.")
             .setColor(Colors.DarkRed);
-        return await logChannel.send({ content: `b@&${sstAdminRoleID}>`, embeds: [embed] });
+        return await logChannel.send({ content: `<@&${sstAdminRoleID}>`, embeds: [embed] });
     }
 }
 
@@ -91,7 +93,42 @@ async function handleUserAcceptance(member) {
  * @param {GuildMember | PartialGuildMember} member
  */
 async function handleUserKick(member) {
+    const robloxID = await getRobloxID(member.id);
+    const logChannelID = "1009515522972459068";
+    const logChannel = client.channels.cache.get(logChannelID);
 
+    try {
+        // Terminate early using catch block because I don't want to write another embed
+        if (robloxID === "Not found within qOS") throw new Error();
+
+        // Check if user is even in QSST or if they left already
+        let rankInSST = await noblox.getRankInGroup(qsstGroupID, robloxID);
+        if (rankInSST === 0) {
+            const embed = new EmbedBuilder()
+                .setTitle("Automatic SST User Removal")
+                .setDescription("User who unsubscribed was not in QSST group. No further action should be necessary.")
+                .setColor(Colors.Blue);
+
+            return await logChannel.send({ embeds: [embed] });
+        }
+
+        // Exile them from the group
+        await noblox.exile(qsstGroupID, robloxID);
+
+        const embed = new EmbedBuilder()
+            .setTitle("Automatic SST User Removal")
+            .setDescription("User who unsubscribed was in SST group and was automatically removed. No further action should be necessary.")
+            .setColor(Colors.Blue);
+
+        return await logChannel.send({ embeds: [embed] });
+    } catch (err) {
+        // Something failed so tell SST Admins
+        const embed = new EmbedBuilder()
+            .setTitle("Automatic SST User Removal Failed")
+            .setDescription("Failed to automatically kick an unsubscribed supporter out of the QSST group. Please do this manually.")
+            .setColor(Colors.DarkRed);
+        return await logChannel.send({ content: `<@&${sstAdminRoleID}>`, embeds: [embed] });
+    }
 }
 
 client.once('ready', async () => {
@@ -100,7 +137,6 @@ client.once('ready', async () => {
     // I couldn't get terry's other code to play nice so I took the easier route
     const robloxClient = await noblox.setCookie(process.env.ROBLOSECURITY);
     console.log(`Logged in as ${robloxClient.UserName}`);
-    client.robloxClient = robloxClient;
 
     console.log("ready!");
 });
@@ -150,7 +186,6 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
             );
 
         await logChannel.send({ embeds: [embed] });
-        await handleUserAcceptance(newMember);
 
         return;
     }
@@ -171,7 +206,6 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
             );
 
         await logChannel.send({ embeds: [embed] });
-        await handleUserAcceptance(newMember);
 
         return;
     } else if (hadRole && !hasRoleNow) {
@@ -213,7 +247,9 @@ client.on('guildMemberRemove', async member => {
             { name: "Roblox name", value: robloxName },
         );
 
-    return await logChannel.send({ embeds: [embed] });
+    await logChannel.send({ embeds: [embed] });
+    await handleUserKick(member);
+    return;
 });
 
 client.login(token);
