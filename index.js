@@ -1,8 +1,7 @@
 require("dotenv").config();
 
 const { Client, GatewayIntentBits, Partials, EmbedBuilder, Colors, GuildMember, PartialGuildMember, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const noblox = require("noblox"); // See client.once('ready') block
-//const bruh = require("noblox.js");
+const noblox = require("noblox.js"); // See client.once('ready') block
 
 const token = process.env.BOT_TOKEN;
 const qOSKey = process.env.QOS_KEY;
@@ -12,6 +11,9 @@ const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers];
 const partials = [Partials.GuildMember];
 
 const client = new Client({ intents: intents, partials: partials });
+
+// Array of the Roblox IDs of users who have recently subscribed but were not pending to the SST group
+const recentlySubscribedUsers = [];
 
 /*
     Functions and jazz
@@ -48,13 +50,11 @@ async function getRobloxID(discordID) {
 }
 
 /**
- * NOT CURRENTLY IN USE - need to get interaction complete
  * @param {GuildMember | PartialGuildMember} member
  */
 async function handleUserAcceptance(member) {
-    return;
-
     const robloxID = await getRobloxID(member.id);
+    const robloxName = await getRobloxName(member.id);
     const logChannelID = "1009515522972459068";
     const logChannel = client.channels.cache.get(logChannelID);
 
@@ -62,28 +62,51 @@ async function handleUserAcceptance(member) {
         // Terminate early using the catch because I don't wanna write another embed
         if (robloxID === "Not found within qOS") throw new Error();
 
-        // Done button for when user has requested to the group
-        const components = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`${member.id}-done}`)
-                    .setLabel("Done")
-                    .setStyle(ButtonStyle.Primary),
-            );
+        let request = await noblox.getJoinRequest(qsstGroupID, robloxID);
+        if (request != null) {
+            // User is pending
+            const embed = new EmbedBuilder()
+                .setTitle("New Subscriber is Pending")
+                .setDescription("A new subscriber is already pending to the QSST group. Vetting may begin.")
+                .setColor(Colors.DarkBlue)
+                .addFields(
+                    { name: "User", value: `${member.user.tag} (${member.id})` },
+                    { name: "Roblox name", value: robloxName },
+                );
+
+            return await logChannel.send({ content: `<@&${sstAdminRoleID}>`, embeds: [embed] });
+        }
+
+        // User is not pending, so add their ID to the list so we get notified when they pend
+        recentlySubscribedUsers.push(robloxID);
 
         const embed = new EmbedBuilder()
-            .setTitle("New Supporter Onboarding")
+            .setTitle("Waiting for New Subscriber to Pend")
+            .setDescription("A new user has subscribed but is not pending to the QSST group.")
+            .setColor(Colors.Blue)
+            .addFields(
+                { name: "User", value: `${member.user.tag} (${member.id})` },
+                { name: "Roblox name", value: robloxName },
+            );
+
+        await logChannel.send({ embeds: [embed] });
+
+        const memberNotifEmbed = new EmbedBuilder()
+            .setTitle("New Supporter Notification")
             .setDescription(
-                "Hello! You're receiving this because you're a new supporter of QSP. As such, you get access to the QSST group!"
-                    + "\nPlease send a join request to the group and click the \"Done\" button once you have. You have 5 minutes."
+                "Hello! Thank you for supporting Quantum with your purchase of a QSP premium membership."
+                    + "\nI noticed that you aren't pending to join the QSST group. Please do so here."
+                    + "\nhttps://www.roblox.com/groups/5681740/Quantum-Structural-Science-Team"
+                    + "\n\nYou will be vetted once you submit your join request."
             )
             .setColor(Colors.Blue);
-        const confirmInteraction = await member.send({ embeds: [embed], components: [components] });
+        return await member.send({ embeds: [embed] });
+
     } catch (err) {
         // Something failed so tell SST Admins
         const embed = new EmbedBuilder()
-            .setTitle("New Supporter DM Failed")
-            .setDescription("Failed to automatically accept a new supporter into the QSST group. Please do this manually.")
+            .setTitle("New Supporter Handling Failed")
+            .setDescription("Failed to automatically handle a new supporter. Please do this manually.\nLikely failed to notify user via DMs to pend to the SST group.")
             .setColor(Colors.DarkRed)
             .addFields(
                 { name: "User", value: `${member.user.tag} (${member.id})` },
@@ -91,6 +114,7 @@ async function handleUserAcceptance(member) {
             );
         return await logChannel.send({ content: `<@&${sstAdminRoleID}>`, embeds: [embed] });
     }
+
 }
 
 /**
@@ -98,7 +122,7 @@ async function handleUserAcceptance(member) {
  */
 async function handleUserKick(member) {
     const robloxID = await getRobloxID(member.id);
-    const robloxName = await getRobloxID(member.id);
+    const robloxName = await getRobloxName(member.id);
     const logChannelID = "1009515522972459068";
     const logChannel = client.channels.cache.get(logChannelID);
 
@@ -203,6 +227,7 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
             );
 
         await logChannel.send({ embeds: [embed] });
+        await handleUserAcceptance(newMember);
 
         return;
     }
@@ -223,6 +248,7 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
             );
 
         await logChannel.send({ embeds: [embed] });
+        await handleUserAcceptance(newMember);
 
         return;
     } else if (hadRole && !hasRoleNow) {
