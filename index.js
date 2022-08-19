@@ -84,7 +84,11 @@ async function handleUserAcceptance(member) {
         const embed = new EmbedBuilder()
             .setTitle("New Supporter DM Failed")
             .setDescription("Failed to automatically accept a new supporter into the QSST group. Please do this manually.")
-            .setColor(Colors.DarkRed);
+            .setColor(Colors.DarkRed)
+            .addFields(
+                { name: "User", value: `${member.user.tag} (${member.id})` },
+                { name: "Roblox name", value: robloxName },
+            );
         return await logChannel.send({ content: `<@&${sstAdminRoleID}>`, embeds: [embed] });
     }
 }
@@ -94,6 +98,7 @@ async function handleUserAcceptance(member) {
  */
 async function handleUserKick(member) {
     const robloxID = await getRobloxID(member.id);
+    const robloxName = await getRobloxID(member.id);
     const logChannelID = "1009515522972459068";
     const logChannel = client.channels.cache.get(logChannelID);
 
@@ -107,7 +112,11 @@ async function handleUserKick(member) {
             const embed = new EmbedBuilder()
                 .setTitle("Automatic SST User Removal")
                 .setDescription("User who unsubscribed was not in QSST group. No further action should be necessary.")
-                .setColor(Colors.Blue);
+                .setColor(Colors.Blue)
+                .addFields(
+                    { name: "User", value: `${member.user.tag} (${member.id})` },
+                    { name: "Roblox name", value: robloxName },
+                );
 
             return await logChannel.send({ embeds: [embed] });
         }
@@ -118,7 +127,11 @@ async function handleUserKick(member) {
         const embed = new EmbedBuilder()
             .setTitle("Automatic SST User Removal")
             .setDescription("User who unsubscribed was in SST group and was automatically removed. No further action should be necessary.")
-            .setColor(Colors.Blue);
+            .setColor(Colors.Blue)
+            .addFields(
+                { name: "User", value: `${member.user.tag} (${member.id})` },
+                { name: "Roblox name", value: robloxName },
+            );
 
         return await logChannel.send({ embeds: [embed] });
     } catch (err) {
@@ -126,7 +139,11 @@ async function handleUserKick(member) {
         const embed = new EmbedBuilder()
             .setTitle("Automatic SST User Removal Failed")
             .setDescription("Failed to automatically kick an unsubscribed supporter out of the QSST group. Please do this manually.")
-            .setColor(Colors.DarkRed);
+            .setColor(Colors.DarkRed)
+            .addFields(
+                { name: "User", value: `${member.user.tag} (${member.id})` },
+                { name: "Roblox name", value: robloxName },
+            );
         return await logChannel.send({ content: `<@&${sstAdminRoleID}>`, embeds: [embed] });
     }
 }
