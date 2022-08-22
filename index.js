@@ -50,6 +50,21 @@ async function getRobloxID(discordID) {
 }
 
 /**
+ * Gets the Discord ID of a given Roblox user using qOS.
+ *
+ * @param {*} robloxID the roblox ID of the person whose Discord ID to retrieve
+ * @returns the Discord ID of the user, or "Not found within qOS" if not found
+ */
+async function getDiscordID(robloxID) {
+    const response = await fetch(`https://api.quantum-science.xyz/Verification/getdata.php?Key=${qOSKey}&method=getFromRobloxID&arg=${robloxID}`, {
+        method: "GET"
+    });
+    const data = await response.json();
+
+    return data["result"].toLowerCase() == "found user" ? data["DiscordID"] : "Not found within qOS";
+}
+
+/**
  * @param {GuildMember | PartialGuildMember} member
  */
 async function handleUserAcceptance(member) {
@@ -77,8 +92,7 @@ async function handleUserAcceptance(member) {
             return await logChannel.send({ content: `<@&${sstAdminRoleID}>`, embeds: [embed] });
         }
 
-        // User is not pending, so add their ID to the list so we get notified when they pend
-        recentlySubscribedUsers.push(robloxID);
+        // User is not pending, so send an info message
 
         const embed = new EmbedBuilder()
             .setTitle("Waiting for New Subscriber to Pend")
@@ -91,22 +105,27 @@ async function handleUserAcceptance(member) {
 
         await logChannel.send({ embeds: [embed] });
 
-        const memberNotifEmbed = new EmbedBuilder()
-            .setTitle("New Supporter Notification")
-            .setDescription(
-                "Hello! Thank you for supporting Quantum with your purchase of a QSP premium membership."
-                    + "\nI noticed that you aren't pending to join the QSST group. Please do so here."
-                    + "\nhttps://www.roblox.com/groups/5681740/Quantum-Structural-Science-Team"
-                    + "\n\nYou will be vetted once you submit your join request."
-            )
-            .setColor(Colors.Blue);
-        return await member.send({ embeds: [embed] });
+        // Try to inform the user to submit a join request
+        try {
+            const memberNotifEmbed = new EmbedBuilder()
+                .setTitle("New Supporter Notification")
+                .setDescription(
+                    "Hello! Thank you for supporting Quantum with your purchase of a QSP premium membership."
+                        + "\nI noticed that you aren't pending to join the QSST group. Please do so here."
+                        + "\nhttps://www.roblox.com/groups/5681740/Quantum-Structural-Science-Team"
+                        + "\n\nYou will be vetted once you submit your join request."
+                )
+                .setColor(Colors.Blue);
+            return await member.send({ embeds: [embed] });
+        } catch (err) {
+            return await logChannel.send(`Failed to notify ${member.user.tag} to request to join the SST group.`)
+        }
 
     } catch (err) {
         // Something failed so tell SST Admins
         const embed = new EmbedBuilder()
             .setTitle("New Supporter Handling Failed")
-            .setDescription("Failed to automatically handle a new supporter. Please do this manually.\nLikely failed to notify user via DMs to pend to the SST group.")
+            .setDescription("Failed to automatically handle a new supporter. Please do this manually.")
             .setColor(Colors.DarkRed)
             .addFields(
                 { name: "User", value: `${member.user.tag} (${member.id})` },
@@ -293,6 +312,11 @@ client.on('guildMemberRemove', async member => {
     await logChannel.send({ embeds: [embed] });
     await handleUserKick(member);
     return;
+});
+
+const joinRequestEvent = noblox.onJoinRequest(parseInt(qsstGroupID));
+joinRequestEvent.on("data", data => {
+    console.log(data);
 });
 
 client.login(token);
