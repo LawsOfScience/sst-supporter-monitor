@@ -238,7 +238,7 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
             .addFields(
                 { name: "User", value: `${newMember.user.tag} (${newMember.id})` },
                 { name: "Roblox name", value: robloxName },
-                { name: "Support Tier (guess)", value: "Stopped supporting" }
+                { name: "Support Tier (guess)", value: qsp.roles.cache.get(hasRoleNow).name }
             );
 
             await logChannel.send({ embeds: [embed] });
