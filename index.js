@@ -119,14 +119,14 @@ async function HandleError(Error, From) {
     // Something failed so tell SST Admins
     const Embed = new EmbedBuilder()
     .setTitle('SST Manager Error')
-    .setDescription('Failed to handle an SST Task, please look into this.')
+    .setDescription('Failed to handle an SST Task, please look into this to see if manual action is needed.')
     .setColor(Colors.DarkRed)
     .addFields(
         { name: 'Error Generated From', value: From },
         { name: 'Error Message', value: Error.toString() }
     );
 
-    return await LogChannel.send({ content: `<@&${SSTAdminRoleID}>`, embeds: [Embed] });
+    return await LogChannel.send({ embeds: [Embed] });
 }
 
 /**
@@ -148,18 +148,19 @@ async function HandleUserAcceptance(Member) {
             // User is pending
             const Embed = new EmbedBuilder()
             .setTitle('New Subscriber is Pending')
-            .setDescription('A new subscriber is pending to the QSST group. Vetting may begin.')
+            .setThumbnail(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${RobloxID}&size=720x720&format=png&isCircular=false`)
+            .setDescription('A new subscriber is pending to the QSST group.')
             .setColor(Colors.DarkBlue)
             .addFields(
                 { name: 'User', value: `${Member.user.tag} (${Member.id})` },
-                { name: 'Roblox Name', value: RobloxName }
+                { name: 'Roblox Info', value: `${RobloxName} (**${RobloxID}**)` }
             );
 
             // Setup button data
             const AcceptID = (Math.random() + 1).toString(36).substring(7)
             const DeclineID = (Math.random() + 1).toString(36).substring(7)
 
-            const row = new ActionRowBuilder()
+            const Row = new ActionRowBuilder()
 			.addComponents(
 				new ButtonBuilder()
 				.setLabel('Accept into QSST')
@@ -172,7 +173,7 @@ async function HandleUserAcceptance(Member) {
 				.setStyle(ButtonStyle.Danger)
 			);
 
-            let Message = await LogChannel.send({ content: `<@&${SSTAdminRoleID}>`, embeds: [Embed], components: [row] });
+            let Message = await LogChannel.send({ content: `<@&${SSTAdminRoleID}>`, embeds: [Embed], components: [Row] });
 
             ButtonData[AcceptID] = {
                 Type: 'Accept',
@@ -195,17 +196,18 @@ async function HandleUserAcceptance(Member) {
 
         // User is not pending, so send an info message
         const Embed = new EmbedBuilder()
-        .setTitle('Waiting for New Subscriber to Pend')
-        .setDescription('A new user has subscribed but is not pending to the QSST group.')
+        .setTitle('New Subscriber - No Join Request')
+        .setThumbnail(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${RobloxID}&size=720x720&format=png&isCircular=false`)
+        .setDescription('A new user has subscribed, but is not pending to the QSST group.')
         .setColor(Colors.Blue)
         .addFields(
-            { name: 'User', value: `${Member.user.tag} (${Member.id})` },
-            { name: 'Roblox name', value: RobloxName },
+            { name: 'User', value: `${Member.user.tag} (**${Member.id}**)` },
+            { name: 'Roblox Info', value: `${RobloxName} (**${RobloxID}**)` }
         );
 
         RecentlySubscribedUsers[RobloxID] = {
             RobloxName: RobloxName,
-            Accepted: false,
+            Checking: false,
             Member: Member
         }
 
@@ -250,10 +252,11 @@ async function HandleUserKick(Member) {
         if (SST_Rank === 0) {
             const Embed = new EmbedBuilder()
             .setTitle('Automatic SST User Removal')
-            .setDescription('User who unsubscribed was not in QSST group. No further action should be necessary.')
+            .setThumbnail(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${RobloxID}&size=720x720&format=png&isCircular=false`)
+            .setDescription('A user who has unsubscribed was not in QSST group.')
             .setColor(Colors.Blue)
             .addFields(
-                { name: 'User', value: `${Member.user.tag} (${Member.id})` },
+                { name: 'User', value: `${Member.user.tag} (**${Member.id}**)` },
                 { name: 'Roblox Info', value: `${RobloxName} (**${RobloxID}**)` }
             );
 
@@ -265,10 +268,11 @@ async function HandleUserKick(Member) {
 
         const Embed = new EmbedBuilder()
         .setTitle('Automatic SST User Removal')
-        .setDescription('User who unsubscribed was in SST group and was automatically removed. No further action should be necessary.')
+        .setThumbnail(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${RobloxID}&size=720x720&format=png&isCircular=false`)
+        .setDescription('User who unsubscribed was in SST group and was automatically removed.')
         .setColor(Colors.Blue)
         .addFields(
-            { name: 'User', value: `${Member.user.tag} (${Member.id})` },
+            { name: 'User', value: `${Member.user.tag} (**${Member.id}**)` },
             { name: 'Roblox Info', value: `${RobloxName} (**${RobloxID}**)` }
         );
 
@@ -285,7 +289,7 @@ SST_Client.on('guildMemberUpdate', async (oldMember, newMember) => {
     const isPartial = oldMember.roles.cache.first() == oldMember.roles.cache.last() && oldMember.roles.cache.first().name == '@everyone';
 
     const RobloxName = await GetRobloxName(newMember.id);
-    const RobloxID = await GetRobloxName(newMember.id);
+    const RobloxID = await GetRobloxID(newMember.id);
 
     if (isPartial) {
         if (!hasRoleNow) {
@@ -341,14 +345,15 @@ SST_Client.on('interactionCreate', async interaction => {
 
                     const Embed = new EmbedBuilder()
                     .setTitle('New Subscriber Accepted')
+                    .setThumbnail(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${Data.RobloxID}&size=720x720&format=png&isCircular=false`)
                     .setDescription('A new subscriber has been accepted into SST.')
                     .setColor(Colors.Green)
                     .addFields(
                         { name: 'User', value: `${Data.Member.user.tag} (${Data.Member.id})` },
-                        { name: 'Roblox name', value: Data.RobloxName },
+                        { name: 'Roblox Info', value: `${Data.RobloxName} (**${Data.RobloxID}**)` }
                     );
 
-                    await Data.Message.edit({ embeds: [Embed], components: [] });
+                    await Data.Message.edit({ content: '', embeds: [Embed], components: [] });
                 } catch(err) {
                     return await HandleError(err, `Handling a SST Accept (interactionCreate) for ${Data.RobloxID}`)
                 }
@@ -360,14 +365,15 @@ SST_Client.on('interactionCreate', async interaction => {
 
                     const Embed = new EmbedBuilder()
                     .setTitle('New Subscriber Declined')
+                    .setThumbnail(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${Data.RobloxID}&size=720x720&format=png&isCircular=false`)
                     .setDescription('A new subscriber has been declined from SST.')
-                    .setColor(Colors.Green)
+                    .setColor(Colors.Red)
                     .addFields(
                         { name: 'User', value: `${Data.Member.user.tag} (${Data.Member.id})` },
-                        { name: 'Roblox name', value: Data.RobloxName },
+                        { name: 'Roblox Info', value: `${Data.RobloxName} (**${Data.RobloxID}**)` }
                     );
     
-                    await Data.Message.edit({ embeds: [Embed], components: [] });
+                    await Data.Message.edit({ content: '', embeds: [Embed], components: [] });
                 } catch(err) {
                     return await HandleError(err, `Handling a SST Decline (interactionCreate) for ${Data.RobloxID}`)
                 }
@@ -422,26 +428,29 @@ async function JoinReqData(RequestData) {
 
     if (!RecentlySubscribedUsers[User.userId]) return
 
-    if (RecentlySubscribedUsers[User.userId].Accepted) return
+    if (RecentlySubscribedUsers[User.userId].Checking) return;
+
+    RecentlySubscribedUsers[User.userId].Checking = true
 
     const Data = RecentlySubscribedUsers[User.userId]
 
     try {
         // User is pending
         const Embed = new EmbedBuilder()
-        .setTitle('New Subscriber is Pending')
-        .setDescription('A new subscriber is pending to the QSST group. Vetting may begin.')
+        .setTitle('A New Subscriber Is Pending')
+        .setThumbnail(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${User.userId}&size=720x720&format=png&isCircular=false`)
+        .setDescription('A new subscriber is pending to the QSST group.')
         .setColor(Colors.DarkBlue)
         .addFields(
-            { name: 'User', value: `${Data.Member.user.tag} (${Data.Member.id})` },
-            { name: 'Roblox Name', value: Data.RobloxName },
+            { name: 'User', value: `${Data.Member.user.tag} (**${Data.Member.id}**)` },
+            { name: 'Roblox Info', value: `${Data.RobloxName} (**${User.userId}**)` }
         );
 
         // Setup button data
         const AcceptID = (Math.random() + 1).toString(36).substring(7)
         const DeclineID = (Math.random() + 1).toString(36).substring(7)
 
-        const row = new ActionRowBuilder()
+        const Row = new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
             .setLabel('Accept into QSST')
@@ -454,11 +463,11 @@ async function JoinReqData(RequestData) {
             .setStyle(ButtonStyle.Danger)
         );
 
-        let Message = await LogChannel.send({ /* content: `<@&${SSTAdminRoleID}>` , */ embeds: [Embed], components: [row] });
+        let Message = await LogChannel.send({ content: `<@&${SSTAdminRoleID}>`, embeds: [Embed], components: [Row] });
 
         ButtonData[AcceptID] = {
             Type: 'Accept',
-            RobloxID: Data.RobloxID,
+            RobloxID: User.userId,
             RobloxName: Data.RobloxName,
             Member: Data.Member,
             Message: Message
@@ -466,7 +475,7 @@ async function JoinReqData(RequestData) {
 
         ButtonData[DeclineID] = {
             Type: 'Decline',
-            RobloxID: Data.RobloxID,
+            RobloxID: User.userId,
             RobloxName: Data.RobloxName,
             Member: Data.Member,
             Message: Message
@@ -477,7 +486,9 @@ async function JoinReqData(RequestData) {
 }
 
 async function JoinReqError(Err) {
-    return await HandleError(Err, `Join request handling | JoinReqError`)
+    return await console.log(`[ERROR DUMP]: Join request handling | JoinReqError | ${Err}`)
+
+    //return await HandleError(Err, `Join request handling | JoinReqError`)
 }
 
 SST_Client.once('ready', async () => {
