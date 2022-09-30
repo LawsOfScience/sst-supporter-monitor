@@ -4,7 +4,7 @@
 
 require('dotenv').config();
 
-const { Client, GatewayIntentBits, Partials, EmbedBuilder, Colors, GuildMember, PartialGuildMember, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, EmbedBuilder, Colors, GuildMember, PartialGuildMember, ActionRowBuilder, ButtonBuilder, ButtonStyle, User } = require('discord.js');
 const noblox = require('noblox.js'); // See Client.once('ready') block
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
@@ -127,7 +127,35 @@ async function HandleError(Error, From) {
     );
 
     return await LogChannel.send({ embeds: [Embed] });
-}
+};
+
+async function CheckGroupMembers() {
+    let Users = {};
+
+    async function Check(Starting) {
+        const Response = await fetch(`https://groups.roblox.com/v1/groups/${SST_Group_ID}/users?limit=10`, {
+            method: 'GET'
+        });
+
+        const JSON = await Response.json()
+
+        for (const User in JSON.data) {
+            const Data = JSON.data[User];
+
+            Users[Data.user.userId] = {
+                Username: Data.user.username,
+                RoleName: Data.role.name,
+                RoleID: Data.role.id
+            }
+        };
+
+        if (!JSON.previousPageCursor) {
+            // not new, START RECURSING
+        }
+    };
+
+    await Check(true)
+}; //CheckGroupMembers()
 
 /**
  * @param {GuildMember | PartialGuildMember} Member
@@ -493,7 +521,14 @@ async function JoinReqError(Err) {
 
 SST_Client.once('ready', async () => {
     QSP = await SST_Client.guilds.cache.get(qspID);
-    LogChannel = await SST_Client.channels.cache.get(LogChannelID)
+    LogChannel = await SST_Client.channels.cache.get(LogChannelID);
+
+    //cache
+    await QSP.members.fetch()
+
+    for (ID in SupporterRoleIDs) {
+        await QSP.roles.cache.get(ID)
+    }
 
     const RobloxClient = await noblox.setCookie(process.env.ROBLOSECURITY);
     console.log(`Logged in as ${RobloxClient.UserName}`);
