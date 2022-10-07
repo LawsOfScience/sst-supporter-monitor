@@ -171,7 +171,17 @@ async function HandleUserAcceptance(Member) {
         // Terminate early
         const RobloxID = await GetRobloxID(Member.id);
 
-        if (RobloxID === 'Not found within qOS') throw new Error(RobloxID);
+        if (RobloxID === 'Not found within qOS') {
+            const Embed = new EmbedBuilder()
+                .setTitle("New Subscriber Information")
+                .setDescription(
+                    "Hello! Thank you for supporting Quantum with your purchase of a QSP premium membership.\n"
+                        + "I noticed that you haven't verified with qOS (our bot) yet.\n"
+                        + "Please verify in QSP and then contact an admin so you can get your benefits."
+                    )
+                .setColor(Colors.Blue)
+            return await Member.send({ embeds: [Embed] });
+        }
 
         const RobloxName = await GetRobloxName(Member.id);
 
@@ -356,8 +366,8 @@ SST_Client.on('guildMemberUpdate', async (oldMember, newMember) => {
     const RobloxID = await GetRobloxID(newMember.id);
 
     if (isPartial) {
-        const ThirtySecondsFromNow = new Date(Date.now() + 30*1000);
-        const RecentlyJoined = oldMember.joinedAt < ThirtySecondsFromNow;
+        const ThirtySecondsFromJoined = new Date(oldMember.joinedAt + (30*1000));
+        const RecentlyJoined = Date.now() < ThirtySecondsFromJoined;
 
         if (!hasRoleNow && !RecentlyJoined) {
             return await HandleUserKick(newMember)
