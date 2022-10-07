@@ -16,9 +16,9 @@ const Benefit_Rank_ID = 9;
 const SSTAdminRoleID = '986687516591677510';
 
 // Stuff we need
-const SupporterRoleIDs = ['1009885228023689226', '1009885281014513785', '1009885317291057182'];
+const SupporterRoleIDs = ["987017208775467098", "987017200688824340", "987017199132741692"];
 const LogChannelID = '1009515522972459068';
-const qspID = '986685866661527562';
+const qspID = "346444423271415819";
 const qsstID = "986685866661527562";
 
 let LogChannel = null;
@@ -356,9 +356,13 @@ SST_Client.on('guildMemberUpdate', async (oldMember, newMember) => {
     const RobloxID = await GetRobloxID(newMember.id);
 
     if (isPartial) {
-        if (!hasRoleNow) {
+        const ThirtySecondsFromNow = new Date(Date.now() + 30*1000);
+        const RecentlyJoined = oldMember.joinedAt < ThirtySecondsFromNow;
+
+        if (!hasRoleNow && !RecentlyJoined) {
             return await HandleUserKick(newMember)
         }
+        if (RecentlyJoined) return;
 
         const Embed = new EmbedBuilder()
         .setTitle('User Support Status Inference')
