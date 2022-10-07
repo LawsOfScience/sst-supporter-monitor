@@ -19,22 +19,24 @@ const SSTAdminRoleID = '986687516591677510';
 const SupporterRoleIDs = ['1009885228023689226', '1009885281014513785', '1009885317291057182'];
 const LogChannelID = '1009515522972459068';
 const qspID = '986685866661527562';
+const qsstID = "986685866661527562";
 
-let LogChannel = null
-let QSP = null
+let LogChannel = null;
+let QSP = null;
+let QSST = null;
 
-const SST_Client = new Client({ 
+const SST_Client = new Client({
     intents: [
-        GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMembers, 
-        GatewayIntentBits.MessageContent, 
-        GatewayIntentBits.GuildMessages, 
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildMembers
-    ], 
-    
+    ],
+
     partials: [
         Partials.GuildMember
-    ] 
+    ]
 });
 
 // Array of the Roblox IDs of users who have recently subscribed but were not pending to the SST group
@@ -42,6 +44,10 @@ let RecentlySubscribedUsers = {};
 let ButtonData = {};
 
 let Cache = {};
+let GroupMemberCache = {
+    "LastUpdated": null,
+    "Users": {}
+};
 
 /*
     Functions and jazz
@@ -130,7 +136,7 @@ async function HandleError(Error, From) {
 };
 
 async function CheckGroupMembers() {
-    let Users = {};
+    // TODO: Note to Aer - check on unsubscribe (no wrongful kicks) and subscribe (no misranking)
 
     async function Check(Starting) {
         const Response = await fetch(`https://groups.roblox.com/v1/groups/${SST_Group_ID}/users?limit=10`, {
@@ -171,6 +177,7 @@ async function HandleUserAcceptance(Member) {
 
         // Look for group request
         const Request = await noblox.getJoinRequest(SST_Group_ID, RobloxID);
+        const IsInSST = await QSST.members.resolve(Member.id);
 
         if (Request != null) {
             // User is pending
@@ -210,7 +217,7 @@ async function HandleUserAcceptance(Member) {
                 Member: Member,
                 Message: Message
             }
-        
+
             ButtonData[DeclineID] = {
                 Type: 'Decline',
                 RobloxID: RobloxID,
@@ -220,6 +227,21 @@ async function HandleUserAcceptance(Member) {
             }
 
             return;
+        } else if (IsInSST) {
+            const RankInGroup = await noblox.getRankNameInGroup(SST_Group_ID, RobloxID);
+
+            const Embed = new EmbedBuilder()
+            .setTitle("New Subscriber in SST")
+            .setThumbnail(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${RobloxID}&size=720x720&format=png&isCircular=false`)
+            .setDescription("A new user has subscribed and is already in SST.")
+            .setColor(Colors.Blue)
+            .addFields(
+                { name: 'User', value: `${Member.user.tag} (**${Member.id}**)` },
+                { name: 'Roblox Info', value: `${RobloxName} (**${RobloxID}**)` },
+                { name: "SST Rank", value: RankInGroup }
+            );
+
+            return await LogChannel.send({ embeds: [Embed] });
         };
 
         // User is not pending, so send an info message
@@ -291,13 +313,27 @@ async function HandleUserKick(Member) {
             return await LogChannel.send({ embeds: [Embed] });
         }
 
-        // Exile them from the group
-        await noblox.exile(SST_Group_ID, RobloxID);
+        // Exile them from the group because they're just a supporter
+        if (SST_Rank == 9) {
+            await noblox.exile(SST_Group_ID, RobloxID);
+
+            const Embed = new EmbedBuilder()
+            .setTitle('Automatic SST User Removal')
+            .setThumbnail(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${RobloxID}&size=720x720&format=png&isCircular=false`)
+            .setDescription('User who unsubscribed was in SST group and was automatically removed.')
+            .setColor(Colors.Blue)
+            .addFields(
+                { name: 'User', value: `${Member.user.tag} (**${Member.id}**)` },
+                { name: 'Roblox Info', value: `${RobloxName} (**${RobloxID}**)` }
+            );
+
+            return await LogChannel.send({ embeds: [Embed] });
+        }
 
         const Embed = new EmbedBuilder()
-        .setTitle('Automatic SST User Removal')
+        .setTitle("Member of SST Unsubscribed")
         .setThumbnail(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${RobloxID}&size=720x720&format=png&isCircular=false`)
-        .setDescription('User who unsubscribed was in SST group and was automatically removed.')
+        .setDescription("User who unsubscribed is a member of SST and therefore was not removed from the group.")
         .setColor(Colors.Blue)
         .addFields(
             { name: 'User', value: `${Member.user.tag} (**${Member.id}**)` },
@@ -363,13 +399,10 @@ SST_Client.on('interactionCreate', async interaction => {
 	if (interaction.isButton()) {
         if (ButtonData[interaction.customId]) {
             const Data = ButtonData[interaction.customId]
-            
+
             if (Data.Type == 'Accept') {
                 try {
                     await noblox.handleJoinRequest(SST_Group_ID, Data.RobloxID, true)
-
-                    // Change them to the right rank
-                    await noblox.setRank(SST_Group_ID, Data.RobloxID, Benefit_Rank_ID)
 
                     const Embed = new EmbedBuilder()
                     .setTitle('New Subscriber Accepted')
@@ -380,6 +413,13 @@ SST_Client.on('interactionCreate', async interaction => {
                         { name: 'User', value: `${Data.Member.user.tag} (${Data.Member.id})` },
                         { name: 'Roblox Info', value: `${Data.RobloxName} (**${Data.RobloxID}**)` }
                     );
+
+                    // Change them to the right rank if they're not already in the group
+                    if (!QSST.members.resolve(Data.Member.user.id)) {
+                        await noblox.setRank(SST_Group_ID, Data.RobloxID, Benefit_Rank_ID);
+                        Embed.setTitle("New Subscriber Already In QSST");
+                        Embed.setDescription("Someone who is already in QSST has subscribed.");
+                    }
 
                     await Data.Message.edit({ content: '', embeds: [Embed], components: [] });
                 } catch(err) {
@@ -400,7 +440,7 @@ SST_Client.on('interactionCreate', async interaction => {
                         { name: 'User', value: `${Data.Member.user.tag} (${Data.Member.id})` },
                         { name: 'Roblox Info', value: `${Data.RobloxName} (**${Data.RobloxID}**)` }
                     );
-    
+
                     await Data.Message.edit({ content: '', embeds: [Embed], components: [] });
                 } catch(err) {
                     return await HandleError(err, `Handling a SST Decline (interactionCreate) for ${Data.RobloxID}`)
@@ -415,35 +455,35 @@ SST_Client.on('messageCreate', async message => {
         if (message.author.bot) return;
 
         if (!message.content.startsWith(';')) return;
-        
+
         let MessageContent = message.content.slice(';').split(' ')
         let CMD = MessageContent[0].toLowerCase();
-        
+
         if (CMD == ';subscribers') {
             const Embed = new EmbedBuilder()
             .setTitle('SST Manager - Subscribers')
             .setColor(Colors.White)
-    
+
             let Completed = {};
             let List = '';
-    
+
             for (const ID of SupporterRoleIDs) {
                 const Users = await QSP.roles.cache.get(ID).members
-    
+
                 for (const [_, User] of Users) {
                     if (await Completed[User.user.id]) continue
-    
+
                     Completed[User.user.id] = true
-    
+
                     const RobloxName = await GetRobloxName(User.user.id)
                     const RobloxID = await GetRobloxID(User.user.id)
-    
+
                     List = List + `\nDiscord: **${User.user.username}** - Roblox: [${RobloxName}](https://roblox.com/users/${RobloxID})`
                 };
             }; Completed = {};
-    
+
             await Embed.setDescription((List == '' && 'None found') || List)
-    
+
             return await message.channel.send({ embeds: [Embed] })
         }
     } catch(err) {
@@ -521,10 +561,12 @@ async function JoinReqError(Err) {
 
 SST_Client.once('ready', async () => {
     QSP = await SST_Client.guilds.cache.get(qspID);
+    QSST = await SST_Client.guilds.cache.get(qsstID);
     LogChannel = await SST_Client.channels.cache.get(LogChannelID);
 
     //cache
     await QSP.members.fetch()
+    await QSST.members.fetch();
 
     for (ID in SupporterRoleIDs) {
         await QSP.roles.cache.get(ID)
