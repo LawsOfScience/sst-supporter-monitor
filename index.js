@@ -517,7 +517,7 @@ SST_Client.on("messageDelete", async Message => {
         if (Message.author.id !== SST_Client.user.id) return;
         const Klear = QSST.members.resolve("195942662241648640");
         await Klear.send("Someone tried to delete a message!");
-        await Klear.send(Message);
+        await Klear.send({ content: "Message", embeds: Message.embeds });
     } catch (Err) {
         console.error(Err);
     }
