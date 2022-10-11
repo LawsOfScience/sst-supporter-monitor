@@ -422,7 +422,8 @@ SST_Client.on('interactionCreate', async interaction => {
                     .setColor(Colors.Green)
                     .addFields(
                         { name: 'User', value: `${Data.Member.user.tag} (${Data.Member.id})` },
-                        { name: 'Roblox Info', value: `${Data.RobloxName} (**${Data.RobloxID}**)` }
+                        { name: 'Roblox Info', value: `${Data.RobloxName} (**${Data.RobloxID}**)` },
+                        { name: "SST Admin", value: interaction.user.tag }
                     );
 
                     // Change them to the right rank if they're not already in the group
@@ -450,7 +451,8 @@ SST_Client.on('interactionCreate', async interaction => {
                     .setColor(Colors.Red)
                     .addFields(
                         { name: 'User', value: `${Data.Member.user.tag} (${Data.Member.id})` },
-                        { name: 'Roblox Info', value: `${Data.RobloxName} (**${Data.RobloxID}**)` }
+                        { name: 'Roblox Info', value: `${Data.RobloxName} (**${Data.RobloxID}**)` },
+                        { name: "SST Admin", value: interaction.user.tag }
                     );
 
                     await Data.Message.edit({ content: '', embeds: [Embed], components: [] });
