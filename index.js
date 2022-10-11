@@ -428,6 +428,7 @@ SST_Client.on('interactionCreate', async interaction => {
                     // Change them to the right rank if they're not already in the group
                     if (!QSST.members.resolve(Data.Member.user.id)) {
                         await noblox.setRank(SST_Group_ID, Data.RobloxID, Benefit_Rank_ID);
+                    } else {
                         Embed.setTitle("New Subscriber Already In QSST");
                         Embed.setDescription("Someone who is already in QSST has subscribed.");
                     }
