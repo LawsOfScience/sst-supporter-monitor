@@ -586,9 +586,9 @@ SST_Client.once('ready', async () => {
     const RobloxClient = await noblox.setCookie(process.env.ROBLOSECURITY);
     console.log(`Logged in as ${RobloxClient.UserName}`);
 
-    noblox.onJoinRequest(SST_Group_ID)
-    .on('data', JoinReqData)
-    .on('error', JoinReqError)
+    const JoinEvent = noblox.onJoinRequest(SST_Group_ID);
+    JoinEvent.on('data', JoinReqData);
+    JoinEvent.on('error', JoinReqError);
 
     console.log('ready!');
 });
