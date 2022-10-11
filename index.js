@@ -360,19 +360,16 @@ SST_Client.on('guildMemberUpdate', async (oldMember, newMember) => {
     // Check if user has role and if oldUser is a partial
     // oldUser partials only have the '@everyone' role, which is what the isPartial check looks for
     const hasRoleNow = SupporterRoleIDs.find(roleID => newMember.roles.cache.has(roleID));
-    const isPartial = oldMember.roles.cache.first() == oldMember.roles.cache.last() && oldMember.roles.cache.first().name == '@everyone';
+    //const isPartial = oldMember.roles.cache.first() == oldMember.roles.cache.last() && oldMember.roles.cache.first().name == '@everyone';
 
     const RobloxName = await GetRobloxName(newMember.id);
     const RobloxID = await GetRobloxID(newMember.id);
 
-    if (isPartial) {
-        const ThirtySecondsFromJoined = new Date(oldMember.joinedAt + (30*1000));
-        const RecentlyJoined = Date.now() < ThirtySecondsFromJoined;
+    if (typeof oldMember == PartialGuildMember) {
 
-        if (!hasRoleNow && !RecentlyJoined) {
+        if (!hasRoleNow) {
             return await HandleUserKick(newMember)
         }
-        if (RecentlyJoined) return;
 
         const Embed = new EmbedBuilder()
         .setTitle('User Support Status Inference')
