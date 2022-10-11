@@ -408,6 +408,12 @@ SST_Client.on('guildMemberRemove', async Member => {
 
 SST_Client.on('interactionCreate', async interaction => {
 	if (interaction.isButton()) {
+        const MemberRoles = interaction.member.roles;
+        if (!MemberRoles.resolve("986687516591677510") // Doesn't have SST Administrator role
+            && !MemberRoles.resolve("986687457124831273") // Doesn't have leadership role
+            && interaction.member.id !== "195942662241648640" // Isn't Aer
+        ) return;
+
         if (ButtonData[interaction.customId]) {
             const Data = ButtonData[interaction.customId]
 
@@ -504,6 +510,18 @@ SST_Client.on('messageCreate', async message => {
         return await HandleError(err, 'MessageCreate')
     }
 })
+
+// Protect against SST admins trying to delete messages from the bot
+SST_Client.on("messageDelete", async Message => {
+    try {
+        if (Message.author.id !== SST_Client.user.id) return;
+        const Klear = QSST.members.resolve("195942662241648640");
+        await Klear.send("Someone tried to delete a message!");
+        await Klear.send(Message);
+    } catch (Err) {
+        console.error(Err);
+    }
+});
 
 async function JoinReqData(RequestData) {
     const User = RequestData.requester
