@@ -4,7 +4,7 @@
 
 require('dotenv').config();
 
-const { Client, GatewayIntentBits, Partials, EmbedBuilder, Colors, GuildMember, PartialGuildMember, ActionRowBuilder, ButtonBuilder, ButtonStyle, User } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, EmbedBuilder, Colors, GuildMember, PartialGuildMember, ActionRowBuilder, ButtonBuilder, ButtonStyle, User, Message } = require('discord.js');
 const noblox = require('noblox.js'); // See Client.once('ready') block
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
@@ -476,6 +476,15 @@ SST_Client.on('messageCreate', async message => {
         if (message.author.bot) return;
 
         if (!message.content.startsWith(';')) return;
+        const QSSTMember = QSST.members.fetch({ user: message.author.id });
+        if (QSSTMember == null || QSSTMember == undefined){
+            return await message.reply("Couldn't find your permissions.");
+        }
+
+        if (
+            !QSSTMember.roles.cache.has("986687516591677510")
+            && age.author.id !== "195942662241648640"
+        ) return;
 
         let MessageContent = message.content.slice(';').split(' ')
         let CMD = MessageContent[0].toLowerCase();
@@ -487,6 +496,7 @@ SST_Client.on('messageCreate', async message => {
 
             let Completed = {};
             let List = '';
+            let SubCount = 0;
 
             for (const ID of SupporterRoleIDs) {
                 const Users = await QSP.roles.cache.get(ID).members
@@ -500,12 +510,40 @@ SST_Client.on('messageCreate', async message => {
                     const RobloxID = await GetRobloxID(User.user.id)
 
                     List = List + `\nDiscord: **${User.user.username}** - Roblox: [${RobloxName}](https://roblox.com/users/${RobloxID})`
+                    SubCount++;
                 };
             }; Completed = {};
 
-            await Embed.setDescription((List == '' && 'None found') || List)
+            Embed.setDescription((List == '' && 'None found') || List)
+            Embed.setFooter(`Total subs: ${SubCount}`);
 
             return await message.channel.send({ embeds: [Embed] })
+        } else if (CMD == ';register') {
+            let UsersToRegister = [];
+
+            if (MessageContent.length == 0) {
+                if (message.mentions.members.keys.length == 0) {
+                    return await message.reply("Couldn't find the users you wanted to register.");
+                }
+                UsersToRegister = [];
+
+                for (const Mention of message.mentions.members) {
+                    UsersToRegister.push(Mention[1]); // Insert the guild member
+                }
+            } else {
+                let Failed = [];
+                for (const UserId in MessageContent) {
+                    const ResolvedUser = QSP.members.fetch({ user: UserId });
+                    if (ResolvedUser == null || ResolvedUser == undefined) {
+                        Failed.push(UserId);
+                    }
+                    UsersToRegister.push(ResolvedUser);
+                }
+            }
+
+            for (const User of UsersToRegister) {
+                HandleUserAcceptance(User);
+            }
         }
     } catch(err) {
         return await HandleError(err, 'MessageCreate')
