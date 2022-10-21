@@ -16,7 +16,8 @@ const Benefit_Rank_ID = 9;
 const SSTAdminRoleID = '986687516591677510';
 
 // Stuff we need
-const SupporterRoleIDs = ["987017208775467098", "987017200688824340", "987017199132741692"];
+// Benefactor Supporter Donor
+const SupporterRoleIDs = ["1014919978627121166", "1007871031496675349", "1014918596771713116"];
 const LogChannelID = '1009515522972459068';
 const qspID = "346444423271415819";
 const qsstID = "986685866661527562";
