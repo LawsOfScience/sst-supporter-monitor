@@ -476,14 +476,20 @@ SST_Client.on('messageCreate', async message => {
         if (message.author.bot) return;
 
         if (!message.content.startsWith(';')) return;
-        const QSSTMember = QSST.members.fetch({ user: message.author.id });
+	    let QSSTMember;
+	    try {
+        QSSTMember = await QSST.members.fetch({ user: message.author.id });
+	    } catch (Err) {
+		    return;
+	    }
         if (QSSTMember == null || QSSTMember == undefined){
             return await message.reply("Couldn't find your permissions.");
         }
+	    console.log("QSST MEMBER", QSSTMember);
 
         if (
             !QSSTMember.roles.cache.has("986687516591677510")
-            && age.author.id !== "195942662241648640"
+            && message.author.id !== "195942662241648640"
         ) return;
 
         let MessageContent = message.content.slice(';').split(' ')
@@ -515,12 +521,13 @@ SST_Client.on('messageCreate', async message => {
             }; Completed = {};
 
             Embed.setDescription((List == '' && 'None found') || List)
-            Embed.setFooter(`Total subs: ${SubCount}`);
+            Embed.setFooter({ text: `Total subs: ${SubCount}` });
 
             return await message.channel.send({ embeds: [Embed] })
         } else if (CMD == ';register') {
             let UsersToRegister = [];
 
+		MessageContent.shift();
             if (MessageContent.length == 0) {
                 if (message.mentions.members.keys.length == 0) {
                     return await message.reply("Couldn't find the users you wanted to register.");
@@ -528,14 +535,18 @@ SST_Client.on('messageCreate', async message => {
                 UsersToRegister = [];
 
                 for (const Mention of message.mentions.members) {
-                    UsersToRegister.push(Mention[1]); // Insert the guild member
+                    UsersToRegister.push(Mention[1].id); // Insert the guild member
                 }
             } else {
-                let Failed = [];
-                for (const UserId in MessageContent) {
-                    const ResolvedUser = QSP.members.fetch({ user: UserId });
+                for (const UserId of MessageContent) {
+			let ResolvedUser;
+			try {
+                    ResolvedUser = await QSP.members.fetch({ user: UserId });
+			} catch (Err) {
+				return;
+			}
                     if (ResolvedUser == null || ResolvedUser == undefined) {
-                        Failed.push(UserId);
+			    continue;
                     }
                     UsersToRegister.push(ResolvedUser);
                 }
