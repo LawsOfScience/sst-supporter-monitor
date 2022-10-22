@@ -429,7 +429,7 @@ SST_Client.on('interactionCreate', async interaction => {
                     .setColor(Colors.Green)
                     .addFields(
                         { name: 'User', value: `${Data.Member.user.tag} (${Data.Member.id})` },
-                        { name: 'Roblox Info', value: `${Data.RobloxName} (**${Data.RobloxID}**)` },
+                        { name: 'Roblox Info', value: `[${Data.RobloxName}](https://roblox.com/users/${User.userId}) **(${User.userId})**` },
                         { name: "SST Admin", value: `${interaction.user.tag}:${interaction.user.id}` }
                     );
 
@@ -582,7 +582,7 @@ async function JoinReqData(RequestData) {
         .setColor(Colors.DarkBlue)
         .addFields(
             { name: 'User', value: `${Data.Member.user.tag} (**${Data.Member.id}**)` },
-            { name: 'Roblox Info', value: `${Data.RobloxName} (**${User.userId}**)` }
+            { name: 'Roblox Info', value: `[${Data.RobloxName}](https://roblox.com/users/${User.userId}) **(${User.userId})**` }
         );
 
         // Setup button data
