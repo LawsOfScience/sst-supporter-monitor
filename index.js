@@ -429,7 +429,7 @@ SST_Client.on('interactionCreate', async interaction => {
                     .setColor(Colors.Green)
                     .addFields(
                         { name: 'User', value: `${Data.Member.user.tag} (${Data.Member.id})` },
-                        { name: 'Roblox Info', value: `[${Data.RobloxName}](https://roblox.com/users/${User.userId}) **(${User.userId})**` },
+                        { name: 'Roblox Info', value: `[${Data.RobloxName}](https://roblox.com/users/${Data.RobloxID}) **(${Data.RobloxID})**` },
                         { name: "SST Admin", value: `${interaction.user.tag}:${interaction.user.id}` }
                     );
 
@@ -476,16 +476,18 @@ SST_Client.on('messageCreate', async message => {
         if (message.author.bot) return;
 
         if (!message.content.startsWith(';')) return;
-	    let QSSTMember;
+	    
+        let QSSTMember;
+
 	    try {
-        QSSTMember = await QSST.members.fetch({ user: message.author.id });
+            QSSTMember = await QSST.members.fetch({ user: message.author.id });
 	    } catch (Err) {
 		    return;
 	    }
+
         if (QSSTMember == null || QSSTMember == undefined){
             return await message.reply("Couldn't find your permissions.");
         }
-	    console.log("QSST MEMBER", QSSTMember);
 
         if (
             !QSSTMember.roles.cache.has("986687516591677510")
@@ -527,27 +529,33 @@ SST_Client.on('messageCreate', async message => {
         } else if (CMD == ';register') {
             let UsersToRegister = [];
 
-		MessageContent.shift();
-            if (MessageContent.length == 0) {
-                if (message.mentions.members.keys.length == 0) {
-                    return await message.reply("Couldn't find the users you wanted to register.");
-                }
-                UsersToRegister = [];
+		    MessageContent.shift();
 
-                for (const Mention of message.mentions.members) {
-                    UsersToRegister.push(Mention[1].id); // Insert the guild member
-                }
-            } else {
-                for (const UserId of MessageContent) {
-			let ResolvedUser;
-			try {
-                    ResolvedUser = await QSP.members.fetch({ user: UserId });
-			} catch (Err) {
-				return;
-			}
-                    if (ResolvedUser == null || ResolvedUser == undefined) {
-			    continue;
+            if (MessageContent.length == 0) {
+                    if (message.mentions.members.keys.length == 0) {
+                        return await message.reply("Couldn't find the users you wanted to register.");
                     }
+
+                    UsersToRegister = [];
+
+                    for (const Mention of message.mentions.members) {
+                        UsersToRegister.push(Mention[1].id); // Insert the guild member
+                    }
+                } else {
+                    for (const UserId of MessageContent) {
+                        let ResolvedUser;
+                
+                        try {
+                            ResolvedUser = await QSP.members.fetch({ user: UserId });
+                        } catch (Err) {
+
+                        return;
+                    }
+
+                    if (ResolvedUser == null || ResolvedUser == undefined) {
+                        continue;
+                    }
+
                     UsersToRegister.push(ResolvedUser);
                 }
             }
